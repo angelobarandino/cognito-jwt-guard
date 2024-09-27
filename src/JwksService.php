@@ -20,9 +20,9 @@ class JwksService
      * @param string $endpoint
      * @return array
      */
-    public function getJwks(string $region, string $poolId, string $endpoint = null): array
+    public function getJwks(string $region, string $poolId, string $endpoint): array
     {
-        $json = Cache::remember('cognito:jwks-' . $poolId, 3600, function () use($region, $poolId) {
+        $json = Cache::remember('cognito:jwks-' . $poolId, 3600, function () use($region, $poolId, $endpoint) {
             return $this->downloadJwks($region, $poolId, $endpoint);
         });
 

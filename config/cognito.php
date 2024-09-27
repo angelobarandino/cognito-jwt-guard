@@ -37,5 +37,6 @@ return [
     | Custom Cognito Endpoint
     |--------------------------------------------------------------------------
     */
-    'endpoint' => ''
+    'endpoint' => '',
+    'validate_issuer' => true
 ];

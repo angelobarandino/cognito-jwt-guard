@@ -49,6 +49,7 @@ class TokenService
      */
     public function getCognitoUuidFromToken(string $jwt): string
     {
+        
         $payload = $this->decode($jwt);
 
         $cognitoUuid = $payload->{$this->uuidColumn};
@@ -66,15 +67,17 @@ class TokenService
     {
         $this->validateHeader($jwt);
 
-        $endpoint     = config('cognito.endpoint');
-        $region     = config('cognito.user_pool_region');
-        $poolId     = config('cognito.user_pool_id');
-        $js         = app()->make(JwksService::class);
-        $keys       = $js->getJwks($region, $poolId, $endpoint);
+        $endpoint           = config('cognito.endpoint');
+        $validate_issuer    = config('cognito.validate_issuer');
+        $region             = config('cognito.user_pool_region');
+        $poolId             = config('cognito.user_pool_id');
+        $js                 = app()->make(JwksService::class);
+        $keys               = $js->getJwks($region, $poolId, $endpoint);
 
         try{
             // JWT::decode will throw an exception if the token is expired or otherwise invalid
-            $payload = JWT::decode($jwt, $keys, ['RS256']);
+            JWT::$leeway = 60;
+            $payload = JWT::decode($jwt, $keys);
         }catch(
             InvalidArgumentException
             | UnexpectedValueException
@@ -87,7 +90,7 @@ class TokenService
             throw new InvalidTokenException($e->getMessage());
         }
 
-        $this->validatePayload($payload, $region, $poolId, $endpoint);
+        $this->validatePayload($payload, $region, $poolId, $validate_issuer);
 
         return $payload;
     }
@@ -133,21 +136,14 @@ class TokenService
      * @param object $payload
      * @param $region
      * @param $poolId
-     * @param $endpoint
      * @return void
      * @throws InvalidTokenException | Throwable
      */
-    public function validatePayload(object $payload, $region, $poolId, string $endpoint = null): void
+    public function validatePayload(object $payload, $region, $poolId, bool $validateIssuer): void
     {
-        // Use the provided endpoint if available; otherwise, use the default issuer URL.
-        if ($endpoint) {
-            $issuer = sprintf('%s/%s', rtrim($endpoint, '/'), $poolId);
-        } else {
-            $issuer = sprintf('https://cognito-idp.%s.amazonaws.com/%s', $region, $poolId);
-        }
-
+        $issuer = sprintf('https://cognito-idp.%s.amazonaws.com/%s', $region, $poolId);
         // Validate the issuer
-        if ($payload->iss !== $issuer) {
+        if ($payload->iss !== $issuer && $validateIssuer) {
             throw new InvalidTokenException('Invalid issuer. Expected: ' . $issuer);
         }
 
@@ -168,5 +164,4 @@ class TokenService
             throw new InvalidTokenException('Invalid token attributes. Parameters "username" and "cognito:username" must be a UUID.');
         }
     }
-
 }
