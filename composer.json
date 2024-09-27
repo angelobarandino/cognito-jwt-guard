@@ -1,5 +1,5 @@
 {
-    "name": "alsbury/cognito-jwt-guard",
+    "name": "angelobarandino/cognito-jwt-guard",
     "description": "A laravel auth guard for JSON Web Tokens issued by Amazon AWS Cognito forked from benbjurstrom/cognito-jwt-guard",
     "type": "laravel",
     "keywords": [
