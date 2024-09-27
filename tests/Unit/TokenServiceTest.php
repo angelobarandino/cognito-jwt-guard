@@ -322,6 +322,8 @@ class TokenServiceTest extends TestCase
     public function testValidatePayloadFailsIfIssuerDoesntMatch()
     {
         $jtb = $this->getJwtTestBundle();
+        
+        $endpoint   = config('cognito.endpoint');
         $region     = config('cognito.user_pool_region');
         $poolId     = config('cognito.user_pool_id');
 
@@ -332,7 +334,7 @@ class TokenServiceTest extends TestCase
 
         $this->expectException(InvalidTokenException ::class);
         $this->expectExceptionMessage('Invalid issuer');
-        $ts->validatePayload((object) $jtb->payload, $region, $poolId);
+        $ts->validatePayload((object) $jtb->payload, $region, $poolId, $endpoint);
     }
 
     /**
@@ -341,6 +343,7 @@ class TokenServiceTest extends TestCase
     public function testValidatePayloadFailsIfIncorrectTokenUse()
     {
         $jtb = $this->getJwtTestBundle();
+        $endpoint   = config('cognito.endpoint');
         $region     = config('cognito.user_pool_region');
         $poolId     = config('cognito.user_pool_id');
 
@@ -350,7 +353,7 @@ class TokenServiceTest extends TestCase
 
         $this->expectException(InvalidTokenException ::class);
         $this->expectExceptionMessage('Invalid token_use');
-        $ts->validatePayload((object) $jtb->payload, $region, $poolId);
+        $ts->validatePayload((object) $jtb->payload, $region, $poolId, $endpoint);
     }
 
     /**
@@ -359,6 +362,7 @@ class TokenServiceTest extends TestCase
     public function testValidatePayloadFailsIfNoUsername()
     {
         $jtb = $this->getJwtTestBundle();
+        $endpoint   = config('cognito.endpoint');
         $region     = config('cognito.user_pool_region');
         $poolId     = config('cognito.user_pool_id');
 
@@ -368,7 +372,7 @@ class TokenServiceTest extends TestCase
 
         $this->expectException(InvalidTokenException ::class);
         $this->expectExceptionMessage('Invalid token attributes. Token must include one of "username","cognito:username"');
-        $ts->validatePayload((object) $jtb->payload, $region, $poolId);
+        $ts->validatePayload((object) $jtb->payload, $region, $poolId, $endpoint);
     }
 
     /**
@@ -377,6 +381,7 @@ class TokenServiceTest extends TestCase
     public function testValidatePayloadFailsIfUsernameIsNotUuid()
     {
         $jtb = $this->getJwtTestBundle();
+        $endpoint   = config('cognito.endpoint');
         $region     = config('cognito.user_pool_region');
         $poolId     = config('cognito.user_pool_id');
 
@@ -387,5 +392,6 @@ class TokenServiceTest extends TestCase
         $this->expectException(InvalidTokenException ::class);
         $this->expectExceptionMessage('Invalid token attributes. Parameters "username" and "cognito:username" must be a UUID.');
         $ts->validatePayload((object) $jtb->payload, $region, $poolId);
+        $ts->validatePayload((object) $jtb->payload, $region, $poolId, $endpoint);
     }
 }

@@ -66,10 +66,11 @@ class TokenService
     {
         $this->validateHeader($jwt);
 
+        $endpoint     = config('cognito.endpoint');
         $region     = config('cognito.user_pool_region');
         $poolId     = config('cognito.user_pool_id');
         $js         = app()->make(JwksService::class);
-        $keys       = $js->getJwks($region, $poolId);
+        $keys       = $js->getJwks($region, $poolId, $endpoint);
 
         try{
             // JWT::decode will throw an exception if the token is expired or otherwise invalid
@@ -86,7 +87,7 @@ class TokenService
             throw new InvalidTokenException($e->getMessage());
         }
 
-        $this->validatePayload($payload, $region, $poolId);
+        $this->validatePayload($payload, $region, $poolId, $endpoint);
 
         return $payload;
     }
@@ -132,29 +133,40 @@ class TokenService
      * @param object $payload
      * @param $region
      * @param $poolId
+     * @param $endpoint
      * @return void
      * @throws InvalidTokenException | Throwable
      */
-    public function validatePayload(object $payload, $region, $poolId): void
+    public function validatePayload(object $payload, $region, $poolId, string $endpoint = null): void
     {
-        $issuer = sprintf('https://cognito-idp.%s.amazonaws.com/%s', $region, $poolId);
-
-        if($payload->iss !== $issuer){
-            throw new InvalidTokenException ('Invalid issuer. Expected:' . $issuer);
+        // Use the provided endpoint if available; otherwise, use the default issuer URL.
+        if ($endpoint) {
+            $issuer = sprintf('%s/%s', rtrim($endpoint, '/'), $poolId);
+        } else {
+            $issuer = sprintf('https://cognito-idp.%s.amazonaws.com/%s', $region, $poolId);
         }
 
-        if(! in_array($payload->token_use, ['id','access'])){
-            throw new InvalidTokenException ('Invalid token_use. Must be one of ["id","access"].');
+        // Validate the issuer
+        if ($payload->iss !== $issuer) {
+            throw new InvalidTokenException('Invalid issuer. Expected: ' . $issuer);
         }
 
-        if(! isset($payload->username) && !isset($payload->{$this->uuidColumn})){
-            throw new InvalidTokenException  ('Invalid token attributes. Token must include a column which contains the UUID.');
+        // Validate token_use
+        if (!in_array($payload->token_use, ['id', 'access'])) {
+            throw new InvalidTokenException('Invalid token_use. Must be one of ["id","access"].');
+        }
+
+        // Validate UUID presence
+        if (!isset($payload->username) && !isset($payload->{$this->uuidColumn})) {
+            throw new InvalidTokenException('Invalid token attributes. Token must include a column which contains the UUID.');
         }
 
         $uuid = $payload->{$this->uuidColumn};
 
-        if(! Uuid::isValid($uuid) && !isset($payload->{$this->uuidColumn})){
-            throw new InvalidTokenException  ('Invalid token attributes. Parameters "username" and "cognito:username" must be a UUID.');
+        // Validate UUID format
+        if (!Uuid::isValid($uuid) && !isset($payload->{$this->uuidColumn})) {
+            throw new InvalidTokenException('Invalid token attributes. Parameters "username" and "cognito:username" must be a UUID.');
         }
     }
+
 }
